@@ -68,3 +68,16 @@ def send_excel(data_frames):
                            )
         cursor.close()
         cnxn.commit()
+
+
+file_type = None
+if filename.endswith('.xls') or filename.endswith('.xlsx'):
+    dataframes = {}
+    excel = pandas.ExcelFile(filename)
+    for sheet in range(len(excel.sheet_names)):
+        dataframes[sheet] = pandas.read_excel(excel, sheet)
+    file_type = 'excel'
+    send_excel(dataframes)
+else:
+    print('Provide a valid Excel file')
+    exit()
