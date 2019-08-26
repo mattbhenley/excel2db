@@ -23,3 +23,48 @@ except:
     except Exception as e:
         print(e)
         exit(0)
+
+
+def send_excel(data_frames):
+    for num, (sheet, data_frame) in enumerate(data_frames.items()):
+        # print(sheet, data_frame)
+        # print(data_frame.columns)
+        if not len(data_frame.columns):
+            continue
+        drop_columns = [x for x in data_frame.columns if 'Unnamed' not in x]
+        for col in drop_columns:
+            data_frame.drop([col], axis=1)
+
+        # Table Names
+        table_name = excel.sheet_names[num].split('.')
+
+        if len(table_name) > 1:
+            table_name = table_name[1].rstrip().lstrip()
+        else:
+            table_name = table_name[0].rstrip().lstrip()
+        print('Processing Sheet:', num, '   Sheet Name:',
+              excel.sheet_names[sheet], '   Table Name:', table_name)
+
+        # Columns processing
+        columns_str = ', ' .join(
+            ['"%s" text' % x for x in data_frame.columns if 'Unnamed' not in x])
+        delete_statement = """DROP TABLE IF EXISTS "{0}"; """.format(
+            table_name)
+        columns = [x for x in data_frame.columns if "Unnamed" not in x]
+        columns_q = ','.join(['?' for x in columns])
+
+        insert_statement = """CREATE TABLE "{0}" (
+            {1}
+        ) """.format(table_name, columns_str)
+
+        cursor = cnxn.cursor()
+        cursor.execute(delete_statement)
+        cursor.execute(insert_statement)
+
+        for index, row in data_frame.iterrows():
+            cursor.execute("""INSERT INTO "{0}" VALUES ({1})""".format(table_name, columns_q),
+                           [str(row[x]) if str(row[x]) !=
+                            'nan' else None for x in columns]
+                           )
+        cursor.close()
+        cnxn.commit()
